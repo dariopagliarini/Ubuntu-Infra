@@ -17,6 +17,7 @@ services:
       - internal
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=proxy"    
 
       # HTTP (serve per Let's Encrypt + redirect)
       - "traefik.http.routers.paglias.rule=Host(`paglias-test.xubi.org`)"
