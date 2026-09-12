@@ -19,12 +19,12 @@ services:
       - "traefik.enable=true"
 
       # HTTP (serve per Let's Encrypt + redirect)
-      - "traefik.http.routers.paglias.rule=Host(`festewebapp.ddnsfree.com`)"
+      - "traefik.http.routers.paglias.rule=Host(`paglias-test.xubi.org`)"
       - "traefik.http.routers.paglias.entrypoints=web"
       - "traefik.http.routers.paglias.middlewares=paglias-redirect"
 
       # HTTPS
-      - "traefik.http.routers.paglias-secure.rule=Host(`festewebapp.ddnsfree.com`)"
+      - "traefik.http.routers.paglias-secure.rule=Host(`paglias-test.xubi.org`)"
       - "traefik.http.routers.paglias-secure.entrypoints=websecure"
       - "traefik.http.routers.paglias-secure.tls.certresolver=le"
 
