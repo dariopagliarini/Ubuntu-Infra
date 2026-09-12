@@ -1,0 +1,20 @@
+# Segreti e variabili d'ambiente
+.env
+*.env
+.env.*
+!*.env.example
+
+# Certificati Let's Encrypt / Traefik
+acme.json
+*.pem
+*.key
+*.crt
+
+# File di sistema Windows
+Thumbs.db
+desktop.ini
+
+# File temporanei editor
+*.swp
+*.bak
+*~
