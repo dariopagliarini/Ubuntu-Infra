@@ -56,6 +56,18 @@ services:
     networks:
       - internal
 
+  sftp:
+    image: atmoz/sftp
+    container_name: paglias_sftp
+    restart: unless-stopped
+    volumes:
+      - wp_data:/home/backupuser/wordpress
+    ports:
+      - "127.0.0.1:2222:22"
+    command: backupuser:${SFTP_PASSWORD}:1001
+    networks:
+      - internal
+      
 networks:
   proxy:
     external: true
