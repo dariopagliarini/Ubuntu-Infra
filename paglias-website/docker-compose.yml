@@ -11,13 +11,13 @@ services:
       WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
     volumes:
-      - wp_data:/var/www/html
+      - /opt/paglias-site/wordpress:/var/www/html
     networks:
       - proxy
       - internal
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=proxy"    
+      - "traefik.docker.network=proxy"
 
       # HTTP (serve per Let's Encrypt + redirect)
       - "traefik.http.routers.paglias.rule=Host(`paglias.org`)"
@@ -56,24 +56,11 @@ services:
     networks:
       - internal
 
-  sftp:
-    image: atmoz/sftp
-    container_name: paglias_sftp
-    restart: unless-stopped
-    volumes:
-      - wp_data:/home/backupuser/wordpress
-    ports:
-      - "127.0.0.1:2222:22"
-    command: backupuser:${SFTP_PASSWORD}:1001
-    networks:
-      - internal
-      
 networks:
   proxy:
     external: true
   internal:
 
 volumes:
-  wp_data:
   db_data:
   
