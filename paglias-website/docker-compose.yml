@@ -12,6 +12,10 @@ services:
       WORDPRESS_DB_NAME: wordpress
     volumes:
       - /opt/paglias-site/wordpress:/var/www/html
+      # Tappo ai processi di Apache: 1,8 GB di RAM e MaxRequestWorkers 150
+      # di serie non stanno insieme (docs/decisions.md). Il file e' versionato
+      # in paglias-website/apache-mpm.conf e va copiato a mano sull'host.
+      - /opt/paglias-site/apache-mpm.conf:/etc/apache2/conf-enabled/zzz-mpm.conf:ro
     networks:
       - proxy
       - internal

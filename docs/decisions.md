@@ -134,6 +134,22 @@ Gli stack `traefik` e `wordpress-site` sono deployati in Portainer col metodo "R
 
 ---
 
+## 2026-09-19 — Tappo ai processi di Apache di WordPress
+
+**Perche'**: la VPS ha 1,8 GB e nessuno swap. Con tutti gli stack accesi restavano 441 MB disponibili. L'immagine `wordpress:php8.3-apache` usa mpm_prefork con `MaxRequestWorkers 150`: poche visite contemporanee bastano a esaurire la memoria, e il kernel uccide un container a sua scelta — potenzialmente il database delle feste durante una serata.
+
+**Come**: file `apache-mpm.conf`, versionato in `paglias-website/` e copiato sull'host in `/opt/paglias-site/apache-mpm.conf`, montato in sola lettura su `/etc/apache2/conf-enabled/zzz-mpm.conf`. Il prefisso `zzz-` serve perche' Apache legge quella cartella in ordine alfabetico e vince l'ultimo file. Valori: `MaxRequestWorkers 8`, `MaxSpareServers 5`, `MaxConnectionsPerChild 500`.
+
+**Misure del 19/09/2026, senza il tappo**: WordPress occupava 378 MB con una decina di processi; il costo reale di un processo e' 25-48 MB (PSS). RSS diceva 130-155 MB per processo, ma conta piu' volte la memoria condivisa: la somma degli RSS superava i 900 MB contro 379 MB di PSS totali. Il PSS si legge dall'host (`docker top` piu' `/proc/<pid>/smaps_rollup`): dentro il container manca la capability SYS_PTRACE e la lettura viene negata.
+
+**Note**:
+- A 8 processi WordPress sta intorno ai 280 MB, 360 nel caso peggiore. Se il sito rallenta con piu' visite contemporanee si sale a 12 e si rimisura.
+- Il file sull'host va aggiornato a mano dopo ogni modifica nel repository: il bind mount punta a `/opt`, non alla copia che Portainer clona.
+- Da fare insieme: swap da 2 GB con `vm.swappiness=10`, che la VPS non ha. Senza, il kernel non ha alternative all'uccidere un container.
+- Seq (122 MB) sparisce con il passaggio da WebFeste a Feste.Online; i due MariaDB (140 e 95 MB) restano separati: unirli varrebbe meno e legherebbe il sito alle feste.
+
+---
+
 ## Template per nuove voci
 
 ```markdown
