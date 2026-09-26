@@ -55,9 +55,57 @@ Configurazione label sul container `paglias_wordpress`:
 - **DynuDNS**: servizio di DNS dinamico che associa `festewebapp.ddnsfree.com` all'IP corrente del server Ionos
 - **Hostname DDNS aggiuntivo** (Dynu): `paglias-test.xubi.org`, stesso IP della VPS, creato per isolare i test di WordPress prima dello switch definitivo al dominio vero `paglias.org` (evita conflitti di routing con `festewebapp.ddnsfree.com`, già usato da webfeste)
 
+## Firewall Ionos
+
+Il firewall sta **davanti** alla VPS, si configura dal pannello Ionos ("My firewall policy") e vale per il traffico in entrata. Se sulla macchina ci sia anche un `ufw` attivo non è stato verificato: da controllare con `sudo ufw status` la prossima volta che si entra, perché due filtri in serie che non si sanno l'uno dell'altro fanno perdere ore.
+
+Dal 26 settembre 2026 le porte aperte sono tre:
+
+| Porta | Cosa | Perché è aperta |
+|---|---|---|
+| 22 | SSH | amministrazione, WinSCP, e i tunnel verso i servizi non pubblicati |
+| 80 | Traefik | redirect a HTTPS e challenge HTTP di Let's Encrypt |
+| 443 | Traefik | tutti i siti: `paglias.org`, `festewebapp.ddnsfree.com` |
+
+**Tutto il resto passa da 80/443 attraverso Traefik, o da un tunnel SSH.** Una porta nuova nel firewall si apre solo se un servizio deve stare su internet per forza: non è il caso di nessun pannello di amministrazione.
+
+### Cosa è stato tolto, e perché
+
+Fino al 26 settembre 2026 erano aperte anche 8443, 8447, 9443 (Portainer), 23306 (MySQL), 9090 (Prometheus), 9100 (Node Exporter) e 5341 (Seq). Provandole dall'esterno una per una, **solo la 9443 rispondeva**: le altre sei erano residui dello stack `webfeste`, spento quando è arrivato `feste_online`. Porte aperte sul nulla, che sarebbero tornate pericolose il giorno in cui un container avesse pubblicato per sbaglio quella stessa porta.
+
+La 23306 in particolare esponeva il MySQL del vecchio stack. Il database di `feste_online` **non pubblica nessuna porta** (`deploy/online/compose.yml` nel repo `Feste`: vive solo sulla rete Docker interna, raggiungibile da `online` e `adminer`), quindi quella regola non serviva più a niente.
+
+### Portainer, dopo la chiusura della 9443
+
+Portainer continua ad ascoltare sulla 9443 dell'host: non è più raggiungibile da internet, ma lo è da dentro un tunnel SSH.
+
+```bash
+ssh -N -L 9443:127.0.0.1:9443 <utente>@festewebapp.ddnsfree.com
+```
+
+Poi nel browser `https://localhost:9443` (l'avviso sul certificato self-signed è lo stesso di prima). Con una voce in `~/.ssh/config`:
+
+```
+Host vps
+  HostName festewebapp.ddnsfree.com
+  User <utente>
+  LocalForward 9443 127.0.0.1:9443
+```
+
+basta `ssh vps`. Sul PC di sviluppo c'è un `Portainer.cmd` sul Desktop che apre il tunnel (se non c'è già), aspetta che la porta risponda e apre il browser.
+
+Nel browser si può usare un nome più leggibile di `localhost`: qualsiasi nome che finisce in `.localhost` — per esempio `https://portainer.localhost:9443` — viene risolto a 127.0.0.1 dai browser, senza toccare il file `hosts`. Fuori dal browser (curl, DBeaver) quel nome non esiste: lì si usa `localhost`.
+
+Lo stesso schema vale per qualsiasi altro servizio che non deve stare su internet: si lascia senza porta pubblicata, o pubblicata solo su `127.0.0.1`, e ci si arriva in tunnel.
+
+### Punti ancora aperti
+
+- **Adminer è pubblico** su `https://festewebapp.ddnsfree.com/db`: chiuso il firewall, è rimasto l'unico ingresso al database dall'esterno, protetto solo dalla password. Da mettere dietro una basic auth di Traefik, o da togliere dal routing pubblico e raggiungere in tunnel come Portainer.
+- **SSH sulla 22 è aperta a tutti**: accettabile con l'accesso a sola chiave. Da controllare che in `/etc/ssh/sshd_config` ci sia `PasswordAuthentication no`.
+
 ## Accesso SSH
 
-L'host è raggiungibile via SSH (usato anche come base per l'accesso SFTP/WinSCP ai file di WordPress, e per i comandi diagnostici Docker/curl usati nel troubleshooting di Traefik — vedi [backup-restore.md](./backup-restore.md)).
+L'host è raggiungibile via SSH (usato anche come base per l'accesso SFTP/WinSCP ai file di WordPress, per i comandi diagnostici Docker/curl usati nel troubleshooting di Traefik — vedi [backup-restore.md](./backup-restore.md) — e per i tunnel verso i servizi non pubblicati, vedi sopra).
 
 ## Diagnostica Traefik/certificati — comandi utili
 
